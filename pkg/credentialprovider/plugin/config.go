@@ -19,10 +19,12 @@ package plugin
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/kubernetes/pkg/credentialprovider"
+	"k8s.io/kubernetes/pkg/kubelet/apis/config"
 	kubeletconfig "k8s.io/kubernetes/pkg/kubelet/apis/config"
 )
 
@@ -41,6 +43,15 @@ func readCredentialProviderConfigFile(configPath string) (*kubeletconfig.Credent
 	config, err := decode(data)
 	if err != nil {
 		return nil, fmt.Errorf("error decoding config %s: %w", configPath, err)
+	}
+
+	// Append current system environment variables, to the ones configured in the
+	// credential provider file. Failing to do so may result in unsuccesful execution
+	// of the provider binary, see https://github.com/kubernetes/kubernetes/issues/102750
+	// Also, this behaviour is inline with Credential Provider Config spec
+	systemEnvVars := os.Environ()
+	for i := range config.Providers {
+		appendSystemEnvVars(systemEnvVars, &config.Providers[i])
 	}
 
 	return config, nil
@@ -125,4 +136,55 @@ func validateCredentialProviderConfig(config *kubeletconfig.CredentialProviderCo
 	}
 
 	return allErrs
+}
+
+// appendSystemEnvVars appends provided array of strings of environment variables in the form of KEY=VALUE
+// with the env vars present in the config
+func appendSystemEnvVars(systemEnvVars []string, config *config.CredentialProvider) {
+	if config == nil {
+		return
+	}
+	configEnvVarNames := getEnvVarKeys(config.Env)
+	systemEnvVarKeyValues := parseEnvVars(systemEnvVars)
+
+	for name, value := range systemEnvVarKeyValues {
+		// if an env var is supplied via provider config file then that should take
+		// a higher priority than the env vars present in the OS
+		if _, ok := configEnvVarNames[name]; !ok {
+			config.Env = append(config.Env, kubeletconfig.ExecEnvVar{
+				Name:  name,
+				Value: value,
+			})
+		}
+	}
+
+}
+
+// getEnvVarKeys creates a map of names of environment variables found in the
+// credential config provider file for easy lookup
+func getEnvVarKeys(envVars []kubeletconfig.ExecEnvVar) map[string]bool {
+	namesMap := make(map[string]bool)
+
+	for _, execEnvVar := range envVars {
+		namesMap[execEnvVar.Name] = true
+	}
+
+	return namesMap
+}
+
+// parseEnvVars converts a string of environment variable of the form KEY=VALUE to a map
+// some valid forms of env vars are FOO=BAR, FOO=, FOO=BARZ=BAR etc.
+func parseEnvVars(envVars []string) map[string]string {
+	parsedEnvVars := make(map[string]string)
+
+	for _, pair := range envVars {
+		keyValuePair := strings.SplitN(pair, "=", 2)
+		if len(keyValuePair) == 2 {
+			parsedEnvVars[keyValuePair[0]] = keyValuePair[1]
+		} else if len(keyValuePair) == 1 {
+			parsedEnvVars[keyValuePair[0]] = ""
+		}
+	}
+
+	return parsedEnvVars
 }

@@ -20,9 +20,12 @@ import (
 	"io/ioutil"
 	"os"
 	"reflect"
+	"sort"
+	"strings"
 	"testing"
 	"time"
 
+	"gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeletconfig "k8s.io/kubernetes/pkg/kubelet/apis/config"
 )
@@ -231,7 +234,7 @@ providers:
 			}
 			defer os.Remove(file.Name())
 
-			_, err = file.WriteString(testcase.configData)
+			_, err = file.WriteString(testcase.configData + getSystemEnvVarsBlock())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -245,6 +248,19 @@ providers:
 				t.Error("expected error but got none")
 			}
 
+			if testcase.config != nil && authConfig != nil {
+				// append OS env vars and sort it
+				for i := range testcase.config.Providers {
+					appendSystemEnvVars(os.Environ(), &testcase.config.Providers[i])
+					sortEnvVars(testcase.config.Providers[i].Env)
+				}
+
+				// sort config file env vars
+				for i := range authConfig.Providers {
+					sortEnvVars(authConfig.Providers[i].Env)
+				}
+			}
+
 			if !reflect.DeepEqual(authConfig, testcase.config) {
 				t.Logf("actual auth config: %#v", authConfig)
 				t.Logf("expected auth config: %#v", testcase.config)
@@ -252,6 +268,15 @@ providers:
 			}
 		})
 	}
+}
+
+// sortEnvVars sorts kubeletconfig.ExecEnvVar struct based on Name in ascending order
+// this is required to pass reflect.DeepCopy test on two ExecEnvVar arrays with same elements
+// but different ordering
+func sortEnvVars(envVars []kubeletconfig.ExecEnvVar) {
+	sort.SliceStable(envVars, func(i, j int) bool {
+		return strings.Compare(envVars[i].Name, envVars[j].Name) < 0
+	})
 }
 
 func Test_validateCredentialProviderConfig(t *testing.T) {
@@ -432,4 +457,306 @@ func Test_validateCredentialProviderConfig(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_parseEnvVars(t *testing.T) {
+	testcases := []struct {
+		name          string
+		envVar        []string
+		expectedValue map[string]string
+	}{
+		{
+			name:   "valid env var",
+			envVar: []string{"FOO=BAR"},
+			expectedValue: map[string]string{
+				"FOO": "BAR",
+			},
+		},
+		{
+			name:   "valid multiple env var",
+			envVar: []string{"FOO=BAR", "FOO2=BAR2", "FOOZ=BARZ"},
+			expectedValue: map[string]string{
+				"FOO":  "BAR",
+				"FOO2": "BAR2",
+				"FOOZ": "BARZ",
+			},
+		},
+		{
+			name:   "valid env var with only key",
+			envVar: []string{"FOO"},
+			expectedValue: map[string]string{
+				"FOO": "",
+			},
+		},
+		{
+			name:   "valid '=' in value",
+			envVar: []string{"FOO=BAR=YADA"},
+			expectedValue: map[string]string{
+				"FOO": "BAR=YADA",
+			},
+		},
+		{
+			name:   "valid '\"' in value",
+			envVar: []string{"FOO={\"foo\":\"bar\"}"},
+			expectedValue: map[string]string{
+				"FOO": "{\"foo\":\"bar\"}",
+			},
+		},
+		{
+			name:   "valid multiline env var",
+			envVar: []string{"42=\"Answer to the Ultimate Question of Life,\n the Universe, and Everything\""},
+			expectedValue: map[string]string{
+				"42": "\"Answer to the Ultimate Question of Life,\n the Universe, and Everything\"",
+			},
+		},
+	}
+
+	for _, testcase := range testcases {
+		t.Run(testcase.name, func(t *testing.T) {
+			parsedEnvVar := parseEnvVars(testcase.envVar)
+			if len(parsedEnvVar) != len(testcase.expectedValue) {
+				t.Errorf("expected size: %d, actual size: %d ", len(parsedEnvVar), len(testcase.expectedValue))
+			}
+
+			for k, v := range testcase.expectedValue {
+				if _, exists := parsedEnvVar[k]; !exists {
+					t.Errorf("key: %s was not found", k)
+				}
+
+				if parsedEnvVar[k] != v {
+					t.Errorf("expected value: %s, obtained value: %s", k, parsedEnvVar[k])
+				}
+			}
+		})
+	}
+}
+
+func Test_appendSystemEnvVars(t *testing.T) {
+	testcases := []struct {
+		name          string
+		osEnv         []string
+		provider      *kubeletconfig.CredentialProvider
+		expectedValue *kubeletconfig.CredentialProvider
+	}{
+		{
+			name:  "valid append env variables",
+			osEnv: []string{"FOO=BAR"},
+			provider: &kubeletconfig.CredentialProvider{
+				Env: []kubeletconfig.ExecEnvVar{
+					{
+						Name:  "FOOZ",
+						Value: "BARZ",
+					},
+				},
+			},
+			expectedValue: &kubeletconfig.CredentialProvider{
+				Env: []kubeletconfig.ExecEnvVar{
+					{
+						Name:  "FOOZ",
+						Value: "BARZ",
+					},
+					{
+						Name:  "FOO",
+						Value: "BAR",
+					},
+				},
+			},
+		},
+		{
+			name:  "configured env vars take priority over OS env var",
+			osEnv: []string{"FOO=BAR"},
+			provider: &kubeletconfig.CredentialProvider{
+				Env: []kubeletconfig.ExecEnvVar{
+					{
+						Name:  "FOO",
+						Value: "NOBAR",
+					},
+				},
+			},
+			expectedValue: &kubeletconfig.CredentialProvider{
+				Env: []kubeletconfig.ExecEnvVar{
+					{
+						Name:  "FOO",
+						Value: "NOBAR",
+					},
+				},
+			},
+		},
+		{
+			name:  "no env vars configured",
+			osEnv: []string{"FOO=BAR", "FOOZ=BARZ"},
+			provider: &kubeletconfig.CredentialProvider{
+				Env: []kubeletconfig.ExecEnvVar{},
+			},
+			expectedValue: &kubeletconfig.CredentialProvider{
+				Env: []kubeletconfig.ExecEnvVar{
+					{
+						Name:  "FOO",
+						Value: "BAR",
+					},
+					{
+						Name:  "FOOZ",
+						Value: "BARZ",
+					},
+				},
+			},
+		},
+	}
+
+	for _, testcase := range testcases {
+		t.Run(testcase.name, func(t *testing.T) {
+
+			appendSystemEnvVars(testcase.osEnv, testcase.provider)
+			sortEnvVars(testcase.provider.Env)
+			sortEnvVars(testcase.expectedValue.Env)
+
+			if !reflect.DeepEqual(testcase.provider, testcase.expectedValue) {
+				t.Errorf("mismatch between expected value: %v and actual value: %v", testcase.expectedValue, testcase.provider)
+			}
+		})
+	}
+}
+
+func Test_readCredentialProviderConfigFileWithEnvVars(t *testing.T) {
+	testcases := []struct {
+		name          string
+		configData    string
+		osEnv         []kubeletconfig.ExecEnvVar
+		configFileEnv []kubeletconfig.ExecEnvVar
+	}{
+		{
+			name: "valid append OS env vars to CredentialProviderConfig env vars",
+			configData: `---
+kind: CredentialProviderConfig
+apiVersion: kubelet.config.k8s.io/v1alpha1
+providers:
+  - name: test
+    matchImages:
+    - "registry.io/foobar"
+    defaultCacheDuration: 10m
+    apiVersion: credentialprovider.kubelet.k8s.io/v1alpha1
+    args:
+    - --v=5
+    env:
+    - name: Test_readCredentialProviderConfigFileWithEnvVars_FOO
+      value: BAR`,
+			configFileEnv: []kubeletconfig.ExecEnvVar{
+				{
+					Name:  "Test_readCredentialProviderConfigFileWithEnvVars_FOO",
+					Value: "BAR",
+				},
+			},
+			osEnv: []kubeletconfig.ExecEnvVar{
+				{
+					Name:  "Test_readCredentialProviderConfigFileWithEnvVars_FOOZ",
+					Value: "BARZ",
+				},
+			},
+		},
+		{
+			name: "valid no env vars configured in CredentialProviderConfig",
+			configData: `---
+kind: CredentialProviderConfig
+apiVersion: kubelet.config.k8s.io/v1alpha1
+providers:
+  - name: test
+    matchImages:
+    - "registry.io/foobar"
+    defaultCacheDuration: 10m
+    apiVersion: credentialprovider.kubelet.k8s.io/v1alpha1
+    args:
+    - --v=5`,
+			configFileEnv: []kubeletconfig.ExecEnvVar{},
+			osEnv: []kubeletconfig.ExecEnvVar{
+				{
+					Name:  "Test_readCredentialProviderConfigFileWithEnvVars_FOO",
+					Value: "BAR",
+				},
+			},
+		},
+	}
+
+	for _, testcase := range testcases {
+		t.Run(testcase.name, func(t *testing.T) {
+			expectedValues := []kubeletconfig.ExecEnvVar{}
+
+			// set env vars present in the testcase.osEnv
+			for _, v := range testcase.osEnv {
+				os.Setenv(v.Name, v.Value)
+			}
+
+			// clean-up env vars set by us so that it doesn't possibly mess up e2e tests
+			defer func() {
+				for _, v := range testcase.osEnv {
+					os.Unsetenv(v.Name)
+				}
+			}()
+
+			// add env vars present in config file
+			expectedValues = append(expectedValues, testcase.configFileEnv...)
+
+			// add env vars which are present in the current OS
+			for k, v := range parseEnvVars(os.Environ()) {
+				expectedValues = append(expectedValues, kubeletconfig.ExecEnvVar{
+					Name:  k,
+					Value: v,
+				})
+			}
+
+			f, err := ioutil.TempFile("", "test")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer os.Remove(f.Name())
+
+			f.WriteString(testcase.configData + getSystemEnvVarsBlock())
+			config, err := readCredentialProviderConfigFile(f.Name())
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			for i := range config.Providers {
+				sortEnvVars(config.Providers[i].Env)
+			}
+			sortEnvVars(expectedValues)
+
+			for i := range config.Providers {
+				provider := config.Providers[i]
+				if !reflect.DeepEqual(expectedValues, provider.Env) {
+					t.Errorf("mismatch between expected value: %v and actual value: %v", expectedValues, provider.Env)
+				}
+			}
+		})
+	}
+}
+
+// getSystemEnvVarsBlock creates a YAML block of env vars in the format
+// -name:
+//  value:
+// this block can be appended to a credential provider config's en var
+// we use yaml.Marshal to generate the blocks since the env vars present
+// in the system could have new lines and special characters which needs
+// proper handling so that they can be un-marshaled by a yaml parser
+func getSystemEnvVarsBlock() string {
+	builder := strings.Builder{}
+	envVars := parseEnvVars(os.Environ())
+
+	// fmt.Println uses "\n" as new line separator, so it has to be fairly OS independent :)
+	builder.WriteString("\n")
+	for k, v := range envVars {
+
+		rawYaml, err := yaml.Marshal(struct {
+			Name  string `yaml:"name"`
+			Value string `yaml:"value"`
+		}{
+			Name:  k,
+			Value: v,
+		})
+		if err != nil {
+			continue
+		}
+
+		builder.WriteString(string(rawYaml))
+	}
+	return builder.String()
 }
