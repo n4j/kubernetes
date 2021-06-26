@@ -46,7 +46,7 @@ func readCredentialProviderConfigFile(configPath string) (*kubeletconfig.Credent
 	}
 
 	// Append current system environment variables, to the ones configured in the
-	// credential provider file. Failing to do so may result in unsuccesful execution
+	// credential provider file. Failing to do so may result in unsuccessful execution
 	// of the provider binary, see https://github.com/kubernetes/kubernetes/issues/102750
 	// Also, this behaviour is inline with Credential Provider Config spec
 	systemEnvVars := os.Environ()
