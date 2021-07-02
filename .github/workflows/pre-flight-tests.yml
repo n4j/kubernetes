@@ -39,7 +39,7 @@ jobs:
       - run: mkdir -p $GOPATH/src/k8s.io/
       
       # Symlinkg the source to $GOPATH
-      - run: ln -s $GIHUB_WORKSPACE/kubernetes/kubernetes $GOPATH/src/k8s.io/
+      - run: sh -c "ln -s $GIHUB_WORKSPACE/kubernetes/kubernetes $GOPATH/src/k8s.io/"
       
       # Some validation
       - run: echo "GOPATH=$GOPATH, GOROOT=$GOROOT" 
