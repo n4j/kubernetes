@@ -18,12 +18,15 @@ jobs:
   
     runs-on: ubuntu-latest
     env: 
-      GOPATH: /home/runner/work/
+      GOPATH: /home/runner/work
+      KUBERNETES_SOURCE_ROOT: $GOPATH/src/k8s.io/kubernetes
+      KUBERNETES_SOURCE_HOME: $KUBERNETES_SOURCE_ROOT/kubernetes
     
   
     steps:
   
       - uses: actions/checkout@v2
+      
       - uses: actions/setup-go@v2
         with:
           stable: 'true'
@@ -36,16 +39,16 @@ jobs:
       - run: env
       
       # Create kubernetes source path
-      - run: mkdir -p $GOPATH/src/k8s.io/
+      - run: mkdir -p $KUBERNETES_SOURCE_ROOT
       
       # Symlinkg the source to $GOPATH
-      - run: sh -c "ln -s $GIHUB_WORKSPACE/kubernetes/kubernetes $GOPATH/src/k8s.io/"
+      - run: sh -c "ln -s $GIHUB_WORKSPACE/kubernetes/kubernetes $KUBERNETES_SOURCE_ROOT && ls $KUBERNETES_SOURCE_HOME"
       
       # Some validation
-      - run: echo "GOPATH=$GOPATH, GOROOT=$GOROOT" 
+      - run: echo "GOPATH=$GOPATH, GOROOT=$GOROOT, KUBERNETES_SOURCE_ROOT=$KUBERNETES_SOURCE_ROOT" 
       
       # Let's enter the kubernetes directory
-      - run: cd $GOPATH/src/k8s.io/kubernetes
+      - run: cd $KUBERNETES_SOURCE_HOME
       
       - name: Verify package names
         run: pwd && .hack/verify-pkg-names.sh
