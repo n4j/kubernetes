@@ -17,14 +17,9 @@ jobs:
   verify:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
-    env:
-      GOPATH: /home/runner/go
-      GITHUB_WORKSPACE: /home/runner/go/src/k8s.io
     
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      - run: sh -c "mkdir -p $GITHUB_WORKSPACE"
-      - run: sh -c "env"
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
@@ -34,18 +29,18 @@ jobs:
           
       #- name: Make
       # run: make
-        
+      - run: sh -c "echo $GOPATH $GOROOT"  
       - name: Verify package names
-        run: sh -c "$GITHUB_WORKSPACE/kubernetes/kubernetes/hack/verify-pkg-names.sh"
+        run: sh -c "hack/verify-pkg-names.sh"
 
       #- name: Verify static checks
       #  run: sh -c "hack/verify-staticcheck.sh"
 
       - name: Verify spelling
-        run: sh -c "$GITHUB_WORKSPACE/kubernetes/kubernetes/hack/verify-staticcheck.sh"
+        run: sh -c "hack/verify-staticcheck.sh"
 
       - name: Verify vendor licenses
-        run: sh -c "$GITHUB_WORKSPACE/kubernetes/kubernetes/hack/verify-vendor-licenses.sh"
+        run: sh -c "hack/verify-vendor-licenses.sh"
 
       - name: Verify type checks
-        run: sh -c "$GITHUB_WORKSPACE/kubernetes/kubernetes/hack/verify-typecheck.sh"
+        run: sh -c "hack/verify-typecheck.sh"
