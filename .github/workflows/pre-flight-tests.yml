@@ -37,7 +37,7 @@ jobs:
       # Dump the env
       - run: env
       
-      - run: mkdir -p /home/runner/work/src/k8s.io/ && ln -s $GITHUB_WORKSPACE /home/runner/work/src/k8s.io/
+      - run: mkdir -p /home/runner/work/src/k8s.io/ && mv -fv $GITHUB_WORKSPACE /home/runner/work/src/k8s.io/
       
       - run: ls -all /home/runner/work/src/k8s.io/
       
@@ -62,8 +62,8 @@ jobs:
       # - name: Verify static checks
       # run: cd /home/runner/work/src/k8s.io/kubernetes/kubernetes && hack/verify-staticcheck.sh
 
-     # - name: Verify spelling
-     #   run: cd /home/runner/work/src/k8s.io/kubernetes/ && hack/verify-staticcheck.sh
+      - name: Verify spelling
+        run: cd /home/runner/work/src/k8s.io/kubernetes/ && hack/verify-staticcheck.sh
 
       - name: Verify vendor licenses
         run: cd /home/runner/work/src/k8s.io/kubernetes/ && hack/verify-vendor-licenses.sh
