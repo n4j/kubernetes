@@ -29,7 +29,13 @@ jobs:
           
       #- name: Make
       # run: make
-   
+  
+      - name : Print env
+        run: env
+        
+      - name : ls root
+        run: ls /
+        
       - name: Verify package names
         run: sh -c "hack/verify-pkg-names.sh"
 
