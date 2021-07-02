@@ -30,12 +30,6 @@ jobs:
       - name: Make
         run: make
    
-  verify:
-      # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-    
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:          
       - name: Verify package names
         run: sh -c "hack/verify-pkg-names.sh"
 
