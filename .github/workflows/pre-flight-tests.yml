@@ -45,10 +45,10 @@ jobs:
       - run: echo "GOPATH=$GOPATH, GOROOT=$GOROOT" 
       
       # Let's enter the kubernetes directory
-      - name: cd $GOPATH/src/k8s.io/kubernetes
+      - run: cd $GOPATH/src/k8s.io/kubernetes
       
       - name: Verify package names
-        run: .hack/verify-pkg-names.sh
+        run: pwd && .hack/verify-pkg-names.sh
 
       - name: Verify static checks
         run: .hack/verify-staticcheck.sh
