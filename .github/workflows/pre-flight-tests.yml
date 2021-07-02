@@ -37,8 +37,9 @@ jobs:
       # Dump the env
       - run: env
       
-      - run: mkdir -p /home/runner/work/kubernetes && ln -s $GITHUB_WORKSPACE 
-      - run: ls -all /home/runner/work/kubernetes/kubernetes
+      - run: mkdir -p /home/runner/work/src/k8s.io/kubernetes && ln -s $GITHUB_WORKSPACE /home/runner/work/src/k8s.io/kubernetes
+      
+      - run: ls -all /home/runner/work/src/k8s.io/kubernetes/kubernetes
       
       # Create kubernetes source path
       #- run: sh -c "mkdir -p /home/runner/work/src/k8s.io/kubernetes"
@@ -53,7 +54,7 @@ jobs:
       
       # Let's enter the kubernetes directory
       #- run: cd /home/runner/work/src/k8s.io/kubernetes/kubernetes
-      - run: /home/runner/work/kubernetes/kubernetes
+      - run: cd /home/runner/work/src/k8s.io/kubernetes/kubernetes
       
       - name: Verify package names
         run:  hack/verify-pkg-names.sh
