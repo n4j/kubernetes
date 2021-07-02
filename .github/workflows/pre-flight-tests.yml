@@ -20,7 +20,8 @@ jobs:
     env: 
       GOPATH: /home/runner/work
       KUBERNETES_SOURCE_ROOT: $GOPATH/src/k8s.io/kubernetes
-      KUBERNETES_SOURCE_HOME: $KUBERNETES_SOURCE_ROOT/kubernetes
+      KUBERNETES_SOURCE_HOME: $GOPATH/src/k8s.io/kubernetes/kubernetes
+      GITHUB_WORKSPACE: /home/runner/work/src/k8s.io/kubernetes/kubernetes
     
   
     steps:
@@ -38,22 +39,24 @@ jobs:
       # Dump the env
       - run: env
       
-      # Create kubernetes source path
-      - run: sh -c "mkdir -p /home/runner/work/src/k8s.io/kubernetes"
+      - run: mkdir -p $GITHUB_WORKSPACE
       
-      - run: env
+      # Create kubernetes source path
+      #- run: sh -c "mkdir -p /home/runner/work/src/k8s.io/kubernetes"
+      
+      #- run: env
       
       # Symlinkg the source to $GOPATH
-      - run: sh -c "ln -s $GIHUB_WORKSPACE /home/runner/work/src/k8s.io/kubernetes/ && ls /home/runner/work/src/k8s.io/kubernetes/kubernetes"
+      #- run: sh -c "ln -s $GIHUB_WORKSPACE /home/runner/work/src/k8s.io/kubernetes/ && ls /home/runner/work/src/k8s.io/kubernetes/kubernetes"
       
       # Some validation
-      - run: echo "GOPATH=$GOPATH, GOROOT=$GOROOT, KUBERNETES_SOURCE_ROOT=$KUBERNETES_SOURCE_ROOT" 
+      #- run: echo "GOPATH=$GOPATH, GOROOT=$GOROOT, KUBERNETES_SOURCE_ROOT=$KUBERNETES_SOURCE_ROOT" 
       
       # Let's enter the kubernetes directory
-      - run: cd /home/runner/work/src/k8s.io/kubernetes/kubernetes
+      #- run: cd /home/runner/work/src/k8s.io/kubernetes/kubernetes
       
       - name: Verify package names
-        run: pwd && .hack/verify-pkg-names.sh
+        run:  .hack/verify-pkg-names.sh
 
       - name: Verify static checks
         run: .hack/verify-staticcheck.sh
