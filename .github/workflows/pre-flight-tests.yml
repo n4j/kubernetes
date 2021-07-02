@@ -59,8 +59,8 @@ jobs:
       - name: Verify package names
         run:  cd /home/runner/work/src/k8s.io/kubernetes/kubernetes && hack/verify-pkg-names.sh
 
-      - name: Verify static checks
-        run: cd /home/runner/work/src/k8s.io/kubernetes/kubernetes && hack/verify-staticcheck.sh
+      # - name: Verify static checks
+      # run: cd /home/runner/work/src/k8s.io/kubernetes/kubernetes && hack/verify-staticcheck.sh
 
       - name: Verify spelling
         run: cd /home/runner/work/src/k8s.io/kubernetes/kubernetes && hack/verify-staticcheck.sh
