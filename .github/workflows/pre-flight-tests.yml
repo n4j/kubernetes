@@ -53,18 +53,19 @@ jobs:
       
       # Let's enter the kubernetes directory
       #- run: cd /home/runner/work/src/k8s.io/kubernetes/kubernetes
+      - run: /home/runner/work/kubernetes/kubernetes
       
       - name: Verify package names
-        run:  .hack/verify-pkg-names.sh
+        run:  hack/verify-pkg-names.sh
 
       - name: Verify static checks
-        run: .hack/verify-staticcheck.sh
+        run: hack/verify-staticcheck.sh
 
       - name: Verify spelling
-        run: .hack/verify-staticcheck.sh
+        run: hack/verify-staticcheck.sh
 
       - name: Verify vendor licenses
-        run: .hack/verify-vendor-licenses.sh
+        run: hack/verify-vendor-licenses.sh
 
       - name: Verify type checks
-        run: .hack/verify-typecheck.sh
+        run: hack/verify-typecheck.sh
