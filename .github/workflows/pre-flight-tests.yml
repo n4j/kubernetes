@@ -31,18 +31,33 @@ jobs:
           
       #- name: Make
       # run: make
-      - run: sh -c "echo $GOPATH $GOROOT"  
+      
+      # Dump the env
+      - run: env
+      
+      # Create kubernetes source path
+      - run: mkdir -p $GOPATH/src/k8s.io/
+      
+      # Symlinkg the source to $GOPATH
+      - run: ln -s $GIHUB_WORKSPACE/kubernetes/kubernetes $GOPATH/src/k8s.io/
+      
+      # Some validation
+      - run: echo "GOPATH=$GOPATH, GOROOT=$GOROOT" 
+      
+      # Let's enter the kubernetes directory
+      - name: cd $GOPATH/src/k8s.io/kubernetes
+      
       - name: Verify package names
-        run: sh -c "hack/verify-pkg-names.sh"
+        run: pwd && .hack/verify-pkg-names.sh
 
-      #- name: Verify static checks
-      #  run: sh -c "hack/verify-staticcheck.sh"
+      - name: Verify static checks
+        run: .hack/verify-staticcheck.sh
 
       - name: Verify spelling
-        run: sh -c "hack/verify-staticcheck.sh"
+        run: .hack/verify-staticcheck.sh
 
       - name: Verify vendor licenses
-        run: sh -c "hack/verify-vendor-licenses.sh"
+        run: .hack/verify-vendor-licenses.sh
 
       - name: Verify type checks
-        run: sh -c "hack/verify-typecheck.sh"
+        run: .hack/verify-typecheck.sh
