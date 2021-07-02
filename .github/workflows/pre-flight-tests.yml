@@ -39,7 +39,7 @@ jobs:
       
       - run: mkdir -p /home/runner/work/src/k8s.io/kubernetes && mv -fv $GITHUB_WORKSPACE /home/runner/work/src/k8s.io/kubernetes
       
-      - run: ls -all /home/runner/work/src/k8s.io/kubernetes/kubernetes
+      - run: ls -R /home/runner/work/src/k8s.io/
       
       # Create kubernetes source path
       #- run: sh -c "mkdir -p /home/runner/work/src/k8s.io/kubernetes"
