@@ -54,7 +54,7 @@ jobs:
       
       # Let's enter the kubernetes directory
       #- run: cd /home/runner/work/src/k8s.io/kubernetes/kubernetes
-      - run: cd /home/runner/work/src/k8s.io/kubernetes/kubernetes && ls -all
+      #- run: cd /home/runner/work/src/k8s.io/kubernetes/kubernetes && ls -all
       
       - name: Verify package names
         run:  cd /home/runner/work/src/k8s.io/kubernetes/ && hack/verify-pkg-names.sh
