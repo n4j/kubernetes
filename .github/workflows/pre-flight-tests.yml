@@ -19,11 +19,13 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GOPATH: /home/runner/go
-      GITHUB_WORKSPACE: $GOPATH/src/k8s.io
+      GITHUB_WORKSPACE: /home/runner/go/src/k8s.io
     
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       - run: mkdir -p $GITHUB_WORKSPACE
+      - run: export GOPATH=/home/runner/go
+      - run: export GITHUB_WORKSPACE=/home/runner/go/src/k8s.io
       - run: env
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
