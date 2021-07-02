@@ -13,16 +13,16 @@ on:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
+  
   verify:
-    # The type of runner that the job will run on
+  
     runs-on: ubuntu-latest
     env: 
       GOPATH: /home/runner/work/
     
-    # Steps represent a sequence of tasks that will be executed as part of the job
+  
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+  
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
         with:
@@ -48,7 +48,7 @@ jobs:
       - name: cd $GOPATH/src/k8s.io/kubernetes
       
       - name: Verify package names
-        run: pwd && .hack/verify-pkg-names.sh
+        run: .hack/verify-pkg-names.sh
 
       - name: Verify static checks
         run: .hack/verify-staticcheck.sh
