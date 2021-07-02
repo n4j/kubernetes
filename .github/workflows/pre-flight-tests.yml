@@ -27,8 +27,8 @@ jobs:
           stable: 'true'
           go-version: '1.16.5'
           
-      - name: Make
-        run: make
+      #- name: Make
+      # run: make
    
       - name: Verify package names
         run: sh -c "hack/verify-pkg-names.sh"
