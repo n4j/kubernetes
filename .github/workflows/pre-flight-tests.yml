@@ -1,0 +1,43 @@
+# This is a basic workflow to help you get started with Actions
+
+name: "Pre flight tests"
+
+# Controls when the workflow will run
+on: push
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+    
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          stable: 'true'
+          go-version: '1.16.5'
+
+      - name: Verify package names
+        run: sh -c "hack/verify-pkg-names.sh"
+
+      - name: Verify static checks
+        run: sh -c "hack/verify-staticcheck.sh"
+
+      - name: Verify spelling
+        run: sh -c "verify-staticcheck.sh"
+
+      - name: Verify vendor licenses
+        run: sh -c "hack/verify-vendor-licenses.sh"
+
+      - name: Verify type checks
+        run: sh -c "hack/verify-typecheck.sh"
+
+      - name: Unit Tests
+        run: make test
