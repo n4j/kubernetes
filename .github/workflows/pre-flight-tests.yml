@@ -21,8 +21,6 @@ jobs:
       GOPATH: /home/runner/work
       KUBERNETES_SOURCE_ROOT: $GOPATH/src/k8s.io/kubernetes
       KUBERNETES_SOURCE_HOME: $GOPATH/src/k8s.io/kubernetes/kubernetes
-      GITHUB_WORKSPACE: /home/runner/work/src/k8s.io/kubernetes/kubernetes
-    
   
     steps:
   
@@ -39,7 +37,8 @@ jobs:
       # Dump the env
       - run: env
       
-      - run: mkdir -p $GITHUB_WORKSPACE
+      - run: mkdir -p /home/runner/work/kubernetes && ln -s $GITHUB_WORKSPACE 
+      - run: ls -all /home/runner/work/kubernetes/kubernetes
       
       # Create kubernetes source path
       #- run: sh -c "mkdir -p /home/runner/work/src/k8s.io/kubernetes"
