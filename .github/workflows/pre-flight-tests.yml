@@ -42,7 +42,7 @@ jobs:
       - run: sh -c "mkdir -p /home/runner/work/src/k8s.io/kubernetes"
       
       # Symlinkg the source to $GOPATH
-      - run: sh -c "ln -s $GIHUB_WORKSPACE/kubernetes/kubernetes /home/runner/work/src/k8s.io/kubernetes && ls /home/runner/work/src/k8s.io/kubernetes/kubernetes"
+      - run: sh -c "echo $GIHUB_WORKSPACE &&  ln -s $GIHUB_WORKSPACE/kubernetes/kubernetes /home/runner/work/src/k8s.io/kubernetes && ls /home/runner/work/src/k8s.io/kubernetes/kubernetes"
       
       # Some validation
       - run: echo "GOPATH=$GOPATH, GOROOT=$GOROOT, KUBERNETES_SOURCE_ROOT=$KUBERNETES_SOURCE_ROOT" 
