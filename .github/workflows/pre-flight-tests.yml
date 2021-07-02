@@ -37,7 +37,7 @@ jobs:
       # Dump the env
       - run: env
       
-      - run: mkdir -p /home/runner/work/src/k8s.io/kubernetes && mv $GITHUB_WORKSPACE -fv /home/runner/work/src/k8s.io/kubernetes
+      - run: mkdir -p /home/runner/work/src/k8s.io/kubernetes && mv -fv $GITHUB_WORKSPACE /home/runner/work/src/k8s.io/kubernetes
       
       - run: ls -all /home/runner/work/src/k8s.io/kubernetes/kubernetes
       
