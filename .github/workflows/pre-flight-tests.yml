@@ -56,14 +56,14 @@ jobs:
       #- run: cd /home/runner/work/src/k8s.io/kubernetes/kubernetes
       #- run: cd /home/runner/work/src/k8s.io/kubernetes/kubernetes && ls -all
       
-      - name: Verify package names
-        run:  cd /home/runner/work/src/k8s.io/kubernetes/ && hack/verify-pkg-names.sh
+     # - name: Verify package names
+     #   run:  cd /home/runner/work/src/k8s.io/kubernetes/ && hack/verify-pkg-names.sh
 
       # - name: Verify static checks
       # run: cd /home/runner/work/src/k8s.io/kubernetes/kubernetes && hack/verify-staticcheck.sh
 
-      - name: Verify spelling
-        run: cd /home/runner/work/src/k8s.io/kubernetes/ && hack/verify-staticcheck.sh
+     # - name: Verify spelling
+     #   run: cd /home/runner/work/src/k8s.io/kubernetes/ && hack/verify-staticcheck.sh
 
       - name: Verify vendor licenses
         run: cd /home/runner/work/src/k8s.io/kubernetes/ && hack/verify-vendor-licenses.sh
