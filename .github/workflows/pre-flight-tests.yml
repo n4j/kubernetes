@@ -37,9 +37,9 @@ jobs:
       # Dump the env
       - run: env
       
-      - run: mkdir -p /home/runner/work/src/k8s.io/kubernetes && cp -fr $GITHUB_WORKSPACE /home/runner/work/src/k8s.io/kubernetes
+      - run: mkdir -p /home/runner/work/src/k8s.io/ && ln -s $GITHUB_WORKSPACE /home/runner/work/src/k8s.io/
       
-      # - run: ls -R /home/runner/work/src/k8s.io/
+      - run: ls -all /home/runner/work/src/k8s.io/
       
       # Create kubernetes source path
       #- run: sh -c "mkdir -p /home/runner/work/src/k8s.io/kubernetes"
@@ -57,16 +57,16 @@ jobs:
       - run: cd /home/runner/work/src/k8s.io/kubernetes/kubernetes && ls -all
       
       - name: Verify package names
-        run:  cd /home/runner/work/src/k8s.io/kubernetes/kubernetes && hack/verify-pkg-names.sh
+        run:  cd /home/runner/work/src/k8s.io/kubernetes/ && hack/verify-pkg-names.sh
 
       # - name: Verify static checks
       # run: cd /home/runner/work/src/k8s.io/kubernetes/kubernetes && hack/verify-staticcheck.sh
 
       - name: Verify spelling
-        run: cd /home/runner/work/src/k8s.io/kubernetes/kubernetes && hack/verify-staticcheck.sh
+        run: cd /home/runner/work/src/k8s.io/kubernetes/ && hack/verify-staticcheck.sh
 
       - name: Verify vendor licenses
-        run: cd /home/runner/work/src/k8s.io/kubernetes/kubernetes && hack/verify-vendor-licenses.sh
+        run: cd /home/runner/work/src/k8s.io/kubernetes/ && hack/verify-vendor-licenses.sh
 
       - name: Verify type checks
-        run: cd /home/runner/work/src/k8s.io/kubernetes/kubernetes && hack/verify-typecheck.sh
+        run: cd /home/runner/work/src/k8s.io/kubernetes/ && hack/verify-typecheck.sh
