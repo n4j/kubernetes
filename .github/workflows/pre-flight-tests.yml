@@ -39,7 +39,7 @@ jobs:
       - run: env
       
       # Create kubernetes source path
-      - run: sh -c "mkdir -p /home/runner/work/src/k8s.io/kubernetes/kubernetes"
+      - run: sh -c "mkdir -p /home/runner/work/src/k8s.io/kubernetes"
       
       # Symlinkg the source to $GOPATH
       - run: sh -c "ln -s $GIHUB_WORKSPACE/kubernetes/kubernetes $KUBERNETES_SOURCE_ROOT && ls $KUBERNETES_SOURCE_HOME"
