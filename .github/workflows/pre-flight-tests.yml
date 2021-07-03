@@ -18,7 +18,7 @@ jobs:
   
     runs-on: ubuntu-latest
     env: 
-      GOPATH: /home/runner/work
+      # GOPATH: /home/runner/work
       KUBERNETES_SOURCE_ROOT: $GOPATH/src/k8s.io/kubernetes
       KUBERNETES_SOURCE_HOME: $GOPATH/src/k8s.io/kubernetes/kubernetes
   
@@ -37,15 +37,16 @@ jobs:
       # Dump the env
       - run: env
       
-      - run: mkdir -p /home/runner/work/src/k8s.io/ && ln -s  /home/runner/work/kubernetes/kubernetes/ /home/runner/work/src/k8s.io/
+      # - run: mkdir -p /home/runner/work/src/k8s.io/ && ln -s  /home/runner/work/kubernetes/kubernetes/ /home/runner/work/src/k8s.io/
+      - run: mkdir -p $GOPATH/src/k8s.io/ && ln -svf $GITHUB_WORKSPACE $GOPATH/src/k8s.io/ && cd $GOPATH/src/k8s.io/kubernetes
       
       - run: ls -all /home/runner/work/src/k8s.io/kubernetes
             
-      #- name: Verify spelling
-      #  run: cd /home/runner/work/src/k8s.io/kubernetes/ && hack/verify-staticcheck.sh
+      - name: Verify spelling
+        run: cd $GOPATH/src/k8s.io/kubernetes/ && hack/verify-staticcheck.sh
 
-      - name: Verify vendor licenses
-        run: cd /home/runner/work/src/k8s.io/kubernetes/ && hack/verify-vendor-licenses.sh
+      # - name: Verify vendor licenses
+      #  run: cd /home/runner/work/src/k8s.io/kubernetes/ && hack/verify-vendor-licenses.sh
 
-      - name: Verify type checks
-        run: cd /home/runner/work/src/k8s.io/kubernetes/ && hack/verify-typecheck-dockerless.sh
+      #- name: Verify type checks
+      #  run: cd /home/runner/work/src/k8s.io/kubernetes/ && hack/verify-typecheck-dockerless.sh
