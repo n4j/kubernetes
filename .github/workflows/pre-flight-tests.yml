@@ -38,12 +38,12 @@ jobs:
       - run: env
       
       # - run: mkdir -p /home/runner/work/src/k8s.io/ && ln -s  /home/runner/work/kubernetes/kubernetes/ /home/runner/work/src/k8s.io/
-      - run: mkdir -p $GOPATH/src/k8s.io/ && ln -svf $GITHUB_WORKSPACE $GOPATH/src/k8s.io/ && cd $GOPATH/src/k8s.io/kubernetes
+      - run: mkdir -p $(go env GOPATH)/src/k8s.io/ && ln -svf $GITHUB_WORKSPACE $(go env GOPATH)/src/k8s.io/ && cd $(go env GOPATH)/src/k8s.io/kubernetes
       
       - run: ls -all /home/runner/work/src/k8s.io/kubernetes
             
       - name: Verify spelling
-        run: cd $GOPATH/src/k8s.io/kubernetes/ && hack/verify-staticcheck.sh
+        run: cd $(go env GOPATH)/src/k8s.io/kubernetes/ && hack/verify-staticcheck.sh
 
       # - name: Verify vendor licenses
       #  run: cd /home/runner/work/src/k8s.io/kubernetes/ && hack/verify-vendor-licenses.sh
