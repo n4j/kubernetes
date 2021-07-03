@@ -35,6 +35,7 @@ jobs:
       # run: make
       
       # Dump the env
+      - run: export GOPATH=$(go env GOPATH)
       - run: env
       
       # - run: mkdir -p /home/runner/work/src/k8s.io/ && ln -s  /home/runner/work/kubernetes/kubernetes/ /home/runner/work/src/k8s.io/
