@@ -40,7 +40,7 @@ jobs:
       # - run: mkdir -p /home/runner/work/src/k8s.io/ && ln -s  /home/runner/work/kubernetes/kubernetes/ /home/runner/work/src/k8s.io/
       - run: mkdir -p $(go env GOPATH)/src/k8s.io/ && ln -svf $GITHUB_WORKSPACE $(go env GOPATH)/src/k8s.io/ && cd $(go env GOPATH)/src/k8s.io/kubernetes
       
-      - run: ls -all /home/runner/work/src/k8s.io/kubernetes
+      - run: ls -all $(go env GOPATH)/src/k8s.io/kubernetes
             
       - name: Verify spelling
         run: cd $(go env GOPATH)/src/k8s.io/kubernetes/ && hack/verify-staticcheck.sh
