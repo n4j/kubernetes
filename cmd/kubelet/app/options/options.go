@@ -70,10 +70,6 @@ type KubeletFlags struct {
 	// Container-runtime-specific options.
 	config.ContainerRuntimeOptions
 
-	// certDirectory is the directory where the TLS certs are located.
-	// If tlsCertFile and tlsPrivateKeyFile are provided, this flag will be ignored.
-	CertDirectory string
-
 	// cloudProvider is the provider for cloud services.
 	// +optional
 	CloudProvider string
@@ -182,7 +178,8 @@ func NewKubeletFlags() *KubeletFlags {
 
 	return &KubeletFlags{
 		ContainerRuntimeOptions: *NewContainerRuntimeOptions(),
-		CertDirectory:           "/var/lib/kubelet/pki",
+		//TODO: n4j - remove below
+		//CertDirectory:           "/var/lib/kubelet/pki",
 		RootDirectory:           defaultRootDir,
 		MasterServiceNamespace:  metav1.NamespaceDefault,
 		MaxContainerCount:       -1,
@@ -336,8 +333,9 @@ func (f *KubeletFlags) AddFlags(mainfs *pflag.FlagSet) {
 
 	fs.StringVar(&f.NodeIP, "node-ip", f.NodeIP, "IP address (or comma-separated dual-stack IP addresses) of the node. If unset, kubelet will use the node's default IPv4 address, if any, or its default IPv6 address if it has no IPv4 addresses. You can pass '::' to make it prefer the default IPv6 address rather than the default IPv4 address.")
 
-	fs.StringVar(&f.CertDirectory, "cert-dir", f.CertDirectory, "The directory where the TLS certs are located. "+
-		"If --tls-cert-file and --tls-private-key-file are provided, this flag will be ignored.")
+	//TODO: n4j - remove below
+	//fs.StringVar(&f.CertDirectory, "cert-dir", f.CertDirectory, "The directory where the TLS certs are located. "+
+	//	"If --tls-cert-file and --tls-private-key-file are provided, this flag will be ignored.")
 
 	fs.StringVar(&f.RootDirectory, "root-dir", f.RootDirectory, "Directory path for managing kubelet files (volume mounts,etc).")
 

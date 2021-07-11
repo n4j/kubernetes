@@ -135,6 +135,7 @@ var (
 		"TLSCertFile",
 		"TLSPrivateKeyFile",
 		"ResolverConfig",
+		"CertDirectory",
 	)
 
 	// KubeletConfiguration fields that do not contain file paths.

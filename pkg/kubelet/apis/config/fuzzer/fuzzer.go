@@ -106,6 +106,7 @@ func Funcs(codecs runtimeserializer.CodecFactory) []interface{} {
 				obj.Logging.Format = "text"
 			}
 			obj.EnableSystemLogHandler = true
+			obj.CertDirectory = "/var/lib/kubelet/pki"
 		},
 	}
 }
