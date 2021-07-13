@@ -234,7 +234,7 @@ providers:
 			}
 			defer os.Remove(file.Name())
 
-			_, err = file.WriteString(testcase.configData + getSystemEnvVarsBlock())
+			_, err = file.WriteString(testcase.configData)
 			if err != nil {
 				t.Fatal(err)
 			}
