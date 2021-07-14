@@ -135,6 +135,10 @@ func newPluginProvider(pluginBinDir string, provider kubeletconfig.CredentialPro
 			pluginBinDir: pluginBinDir,
 			args:         provider.Args,
 			envVars:      provider.Env,
+			environ:      os.Environ,
+			run: func(cmd *exec.Cmd) error {
+				return cmd.Run()
+			},
 		},
 	}, nil
 }
@@ -354,6 +358,8 @@ type execPlugin struct {
 	args         []string
 	envVars      []kubeletconfig.ExecEnvVar
 	pluginBinDir string
+	environ      func() []string
+	run          func(cmd *exec.Cmd) error
 }
 
 // ExecPlugin executes the plugin binary with arguments and environment variables specified in CredentialProviderConfig:
@@ -385,12 +391,27 @@ func (e *execPlugin) ExecPlugin(ctx context.Context, image string) (*credentialp
 	cmd := exec.CommandContext(ctx, filepath.Join(e.pluginBinDir, e.name), e.args...)
 	cmd.Stdout, cmd.Stderr, cmd.Stdin = stdout, stderr, stdin
 
-	cmd.Env = []string{}
+	// Initialise envVars map with system defined environment variables
+	envVars := parseEnvVars(e.environ())
+
+	// Add all the environment variables configured in the plugin provider
+	// this will also override system env vars with the ones present in the
+	// config file giving config defined env vars a higher priority
 	for _, envVar := range e.envVars {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", envVar.Name, envVar.Value))
+		envVars[envVar.Name] = envVar.Value
 	}
 
-	err = cmd.Run()
+	cmd.Env = []string{}
+
+	// Append current system environment variables, to the ones configured in the
+	// credential provider file. Failing to do so may result in unsuccessful execution
+	// of the provider binary, see https://github.com/kubernetes/kubernetes/issues/102750
+	// Also, this behaviour is inline with Credential Provider Config spec
+	for k, v := range envVars {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", k, v))
+	}
+
+	err = e.run(cmd)
 	if ctx.Err() != nil {
 		return nil, fmt.Errorf("error execing credential provider plugin %s for image %s: %w", e.name, image, ctx.Err())
 	}
@@ -456,4 +477,21 @@ func (e *execPlugin) decodeResponse(data []byte) (*credentialproviderapi.Credent
 func parseRegistry(image string) string {
 	imageParts := strings.Split(image, "/")
 	return imageParts[0]
+}
+
+// parseEnvVars converts a string of environment variable of the form KEY=VALUE to a map
+// some valid forms of env vars are FOO=BAR, FOO=, FOO=BARZ=BAR etc.
+func parseEnvVars(envVars []string) map[string]string {
+	parsedEnvVars := make(map[string]string)
+
+	for _, pair := range envVars {
+		keyValuePair := strings.SplitN(pair, "=", 2)
+		if len(keyValuePair) == 2 {
+			parsedEnvVars[keyValuePair[0]] = keyValuePair[1]
+		} else if len(keyValuePair) == 1 {
+			parsedEnvVars[keyValuePair[0]] = ""
+		}
+	}
+
+	return parsedEnvVars
 }

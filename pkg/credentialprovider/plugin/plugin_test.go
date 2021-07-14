@@ -18,7 +18,10 @@ package plugin
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	kubeletconfig "k8s.io/kubernetes/pkg/kubelet/apis/config"
+	"os/exec"
 	"reflect"
 	"sync"
 	"testing"
@@ -712,4 +715,233 @@ func Test_NoCacheResponse(t *testing.T) {
 		t.Logf("expected cache keys: %v", expectedCacheKeys)
 		t.Error("unexpected cache keys")
 	}
+}
+
+func Test_parseEnvVars(t *testing.T) {
+	testcases := []struct {
+		name          string
+		envVar        []string
+		expectedValue map[string]string
+	}{
+		{
+			name:   "valid env var",
+			envVar: []string{"FOO=BAR"},
+			expectedValue: map[string]string{
+				"FOO": "BAR",
+			},
+		},
+		{
+			name:   "valid multiple env var",
+			envVar: []string{"FOO=BAR", "FOO2=BAR2", "FOOZ=BARZ"},
+			expectedValue: map[string]string{
+				"FOO":  "BAR",
+				"FOO2": "BAR2",
+				"FOOZ": "BARZ",
+			},
+		},
+		{
+			name:   "valid env var with only key",
+			envVar: []string{"FOO"},
+			expectedValue: map[string]string{
+				"FOO": "",
+			},
+		},
+		{
+			name:   "valid '=' in value",
+			envVar: []string{"FOO=BAR=YADA"},
+			expectedValue: map[string]string{
+				"FOO": "BAR=YADA",
+			},
+		},
+		{
+			name:   "valid '\"' in value",
+			envVar: []string{"FOO={\"foo\":\"bar\"}"},
+			expectedValue: map[string]string{
+				"FOO": "{\"foo\":\"bar\"}",
+			},
+		},
+		{
+			name:   "valid multiline env var",
+			envVar: []string{"42=\"Answer to the Ultimate Question of Life,\n the Universe, and Everything\""},
+			expectedValue: map[string]string{
+				"42": "\"Answer to the Ultimate Question of Life,\n the Universe, and Everything\"",
+			},
+		},
+	}
+
+	for _, testcase := range testcases {
+		t.Run(testcase.name, func(t *testing.T) {
+			parsedEnvVar := parseEnvVars(testcase.envVar)
+			if len(parsedEnvVar) != len(testcase.expectedValue) {
+				t.Errorf("expected size: %d, actual size: %d ", len(parsedEnvVar), len(testcase.expectedValue))
+			}
+
+			for k, v := range testcase.expectedValue {
+				if _, exists := parsedEnvVar[k]; !exists {
+					t.Errorf("key: %s was not found", k)
+				}
+
+				if parsedEnvVar[k] != v {
+					t.Errorf("expected value: %s, obtained value: %s", k, parsedEnvVar[k])
+				}
+			}
+		})
+	}
+}
+
+func Test_ExecPluginEnvVars(t *testing.T) {
+
+	pluginResponse := `{
+    "kind": "CredentialProviderResponse",
+    "apiVersion": "credentialprovider.kubelet.k8s.io/v1alpha1",
+    "cacheKeyType": "Registry",
+    "cacheDuration": "21.6µs",
+    "auth":
+    {
+        "90912.dkr.ecr.us-east-1.amazonaws.com":
+        {
+            "username": "fake",
+            "password": "fake"
+        }
+    }
+}`
+
+	mediaType := "application/json"
+	info, ok := runtime.SerializerInfoForMediaType(codecs.SupportedMediaTypes(), mediaType)
+	if !ok {
+		t.Fatalf("unsupported media type %q", mediaType)
+	}
+
+	testcases := []struct {
+		name            string
+		expectFailure   bool
+		systemEnvVars   []string
+		execPlugin      *execPlugin
+		expectedEnvVars map[string]string
+		pluginResponse  string
+	}{
+		{
+			name:          "positive append system env vars",
+			expectFailure: false,
+			systemEnvVars: []string{"HOME=/home/foo", "PATH=/usr/bin"},
+			execPlugin: &execPlugin{
+				encoder:    codecs.EncoderForVersion(info.Serializer, credentialproviderv1alpha1.SchemeGroupVersion),
+				apiVersion: "credentialprovider.kubelet.k8s.io/v1alpha1",
+				envVars: []kubeletconfig.ExecEnvVar{
+					{
+						Name:  "SUPER_SECRET_STRONG_ACCESS_KEY",
+						Value: "123456789",
+					},
+				},
+			},
+			expectedEnvVars: map[string]string{
+				"HOME":                           "/home/foo",
+				"PATH":                           "/usr/bin",
+				"SUPER_SECRET_STRONG_ACCESS_KEY": "123456789",
+			},
+			pluginResponse: pluginResponse,
+		},
+		{
+			name:          "positive no env vars provided in plugin",
+			expectFailure: false,
+			systemEnvVars: []string{"HOME=/home/foo", "PATH=/usr/bin"},
+			execPlugin: &execPlugin{
+				encoder:    codecs.EncoderForVersion(info.Serializer, credentialproviderv1alpha1.SchemeGroupVersion),
+				apiVersion: "credentialprovider.kubelet.k8s.io/v1alpha1",
+			},
+			expectedEnvVars: map[string]string{
+				"HOME": "/home/foo",
+				"PATH": "/usr/bin",
+			},
+			pluginResponse: pluginResponse,
+		},
+		{
+			name:          "positive no system env vars but env vars are provided in plugin",
+			expectFailure: false,
+			execPlugin: &execPlugin{
+				encoder:    codecs.EncoderForVersion(info.Serializer, credentialproviderv1alpha1.SchemeGroupVersion),
+				apiVersion: "credentialprovider.kubelet.k8s.io/v1alpha1",
+				envVars: []kubeletconfig.ExecEnvVar{
+					{
+						Name:  "SUPER_SECRET_STRONG_ACCESS_KEY",
+						Value: "123456789",
+					},
+				},
+			},
+			expectedEnvVars: map[string]string{
+				"SUPER_SECRET_STRONG_ACCESS_KEY": "123456789",
+			},
+			pluginResponse: pluginResponse,
+		},
+		{
+			name:          "positive no system or plugin provided env vars",
+			expectFailure: false,
+			execPlugin: &execPlugin{
+				encoder:    codecs.EncoderForVersion(info.Serializer, credentialproviderv1alpha1.SchemeGroupVersion),
+				apiVersion: "credentialprovider.kubelet.k8s.io/v1alpha1",
+			},
+			expectedEnvVars: map[string]string{},
+			pluginResponse:  pluginResponse,
+		},
+		{
+			name:          "positive plugin provided vars takes priority",
+			expectFailure: false,
+			systemEnvVars: []string{"HOME=/home/foo", "PATH=/usr/bin", "SUPER_SECRET_STRONG_ACCESS_KEY=1111"},
+			execPlugin: &execPlugin{
+				encoder:    codecs.EncoderForVersion(info.Serializer, credentialproviderv1alpha1.SchemeGroupVersion),
+				apiVersion: "credentialprovider.kubelet.k8s.io/v1alpha1",
+				envVars: []kubeletconfig.ExecEnvVar{
+					{
+						Name:  "SUPER_SECRET_STRONG_ACCESS_KEY",
+						Value: "123456789",
+					},
+				},
+			},
+			expectedEnvVars: map[string]string{
+				"HOME":                           "/home/foo",
+				"PATH":                           "/usr/bin",
+				"SUPER_SECRET_STRONG_ACCESS_KEY": "123456789",
+			},
+			pluginResponse: pluginResponse,
+		},
+	}
+
+	for _, testcase := range testcases {
+		t.Run(testcase.name, func(t *testing.T) {
+			testcase.execPlugin.environ = func() []string {
+				return testcase.systemEnvVars
+			}
+			testcase.execPlugin.run = func(cmd *exec.Cmd) error {
+				err := validate(testcase.expectedEnvVars, cmd.Env)
+				if err == nil {
+					_, e := cmd.Stdout.Write([]byte(testcase.pluginResponse))
+					if e != nil {
+						t.Logf("error occurred while writing plugin response %v", e)
+					}
+				}
+				return err
+			}
+			_, err := testcase.execPlugin.ExecPlugin(context.Background(), "")
+			if !testcase.expectFailure && err != nil {
+				t.Fatalf("unexpeted error %v", err)
+			}
+		})
+	}
+}
+
+func validate(expected map[string]string, actual []string) error {
+	actualEnvVars := parseEnvVars(actual)
+	if len(actualEnvVars) != len(expected) {
+		return errors.New(fmt.Sprintf("actual env var length [%d] and expected env var length [%d] don't match",
+			len(actualEnvVars), len(expected)))
+	}
+
+	for k, v := range expected {
+		if actualEnvVars[k] != v {
+			return errors.New(fmt.Sprintf("actual env var value [%s] and expected env var value [%s] don't match for key [%s]",
+				v, actualEnvVars[k], k))
+		}
+	}
+
+	return nil
 }
