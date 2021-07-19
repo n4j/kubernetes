@@ -717,78 +717,6 @@ func Test_NoCacheResponse(t *testing.T) {
 	}
 }
 
-func Test_parseEnvVars(t *testing.T) {
-	testcases := []struct {
-		name          string
-		envVar        []string
-		expectedValue map[string]string
-	}{
-		{
-			name:   "valid env var",
-			envVar: []string{"FOO=BAR"},
-			expectedValue: map[string]string{
-				"FOO": "BAR",
-			},
-		},
-		{
-			name:   "valid multiple env var",
-			envVar: []string{"FOO=BAR", "FOO2=BAR2", "FOOZ=BARZ"},
-			expectedValue: map[string]string{
-				"FOO":  "BAR",
-				"FOO2": "BAR2",
-				"FOOZ": "BARZ",
-			},
-		},
-		{
-			name:   "valid env var with only key",
-			envVar: []string{"FOO"},
-			expectedValue: map[string]string{
-				"FOO": "",
-			},
-		},
-		{
-			name:   "valid '=' in value",
-			envVar: []string{"FOO=BAR=YADA"},
-			expectedValue: map[string]string{
-				"FOO": "BAR=YADA",
-			},
-		},
-		{
-			name:   "valid '\"' in value",
-			envVar: []string{"FOO={\"foo\":\"bar\"}"},
-			expectedValue: map[string]string{
-				"FOO": "{\"foo\":\"bar\"}",
-			},
-		},
-		{
-			name:   "valid multiline env var",
-			envVar: []string{"42=\"Answer to the Ultimate Question of Life,\n the Universe, and Everything\""},
-			expectedValue: map[string]string{
-				"42": "\"Answer to the Ultimate Question of Life,\n the Universe, and Everything\"",
-			},
-		},
-	}
-
-	for _, testcase := range testcases {
-		t.Run(testcase.name, func(t *testing.T) {
-			parsedEnvVar := parseEnvVars(testcase.envVar)
-			if len(parsedEnvVar) != len(testcase.expectedValue) {
-				t.Errorf("expected size: %d, actual size: %d ", len(parsedEnvVar), len(testcase.expectedValue))
-			}
-
-			for k, v := range testcase.expectedValue {
-				if _, exists := parsedEnvVar[k]; !exists {
-					t.Errorf("key: %s was not found", k)
-				}
-
-				if parsedEnvVar[k] != v {
-					t.Errorf("expected value: %s, obtained value: %s", k, parsedEnvVar[k])
-				}
-			}
-		})
-	}
-}
-
 func Test_ExecPluginEnvVars(t *testing.T) {
 
 	pluginResponse := `{
@@ -817,7 +745,7 @@ func Test_ExecPluginEnvVars(t *testing.T) {
 		expectFailure   bool
 		systemEnvVars   []string
 		execPlugin      *execPlugin
-		expectedEnvVars map[string]string
+		expectedEnvVars []string
 		pluginResponse  string
 	}{
 		{
@@ -834,10 +762,10 @@ func Test_ExecPluginEnvVars(t *testing.T) {
 					},
 				},
 			},
-			expectedEnvVars: map[string]string{
-				"HOME":                           "/home/foo",
-				"PATH":                           "/usr/bin",
-				"SUPER_SECRET_STRONG_ACCESS_KEY": "123456789",
+			expectedEnvVars: []string{
+				"HOME=/home/foo",
+				"PATH=/usr/bin",
+				"SUPER_SECRET_STRONG_ACCESS_KEY=123456789",
 			},
 			pluginResponse: pluginResponse,
 		},
@@ -849,9 +777,9 @@ func Test_ExecPluginEnvVars(t *testing.T) {
 				encoder:    codecs.EncoderForVersion(info.Serializer, credentialproviderv1alpha1.SchemeGroupVersion),
 				apiVersion: "credentialprovider.kubelet.k8s.io/v1alpha1",
 			},
-			expectedEnvVars: map[string]string{
-				"HOME": "/home/foo",
-				"PATH": "/usr/bin",
+			expectedEnvVars: []string{
+				"HOME=/home/foo",
+				"PATH=/usr/bin",
 			},
 			pluginResponse: pluginResponse,
 		},
@@ -868,8 +796,8 @@ func Test_ExecPluginEnvVars(t *testing.T) {
 					},
 				},
 			},
-			expectedEnvVars: map[string]string{
-				"SUPER_SECRET_STRONG_ACCESS_KEY": "123456789",
+			expectedEnvVars: []string{
+				"SUPER_SECRET_STRONG_ACCESS_KEY=123456789",
 			},
 			pluginResponse: pluginResponse,
 		},
@@ -880,7 +808,7 @@ func Test_ExecPluginEnvVars(t *testing.T) {
 				encoder:    codecs.EncoderForVersion(info.Serializer, credentialproviderv1alpha1.SchemeGroupVersion),
 				apiVersion: "credentialprovider.kubelet.k8s.io/v1alpha1",
 			},
-			expectedEnvVars: map[string]string{},
+			expectedEnvVars: []string{},
 			pluginResponse:  pluginResponse,
 		},
 		{
@@ -897,10 +825,11 @@ func Test_ExecPluginEnvVars(t *testing.T) {
 					},
 				},
 			},
-			expectedEnvVars: map[string]string{
-				"HOME":                           "/home/foo",
-				"PATH":                           "/usr/bin",
-				"SUPER_SECRET_STRONG_ACCESS_KEY": "123456789",
+			expectedEnvVars: []string{
+				"HOME=/home/foo",
+				"PATH=/usr/bin",
+				"SUPER_SECRET_STRONG_ACCESS_KEY=1111",
+				"SUPER_SECRET_STRONG_ACCESS_KEY=123456789",
 			},
 			pluginResponse: pluginResponse,
 		},
@@ -929,17 +858,15 @@ func Test_ExecPluginEnvVars(t *testing.T) {
 	}
 }
 
-func validate(expected map[string]string, actual []string) error {
-	actualEnvVars := parseEnvVars(actual)
-	if len(actualEnvVars) != len(expected) {
+func validate(expected, actual []string) error {
+	if len(actual) != len(expected) {
 		return errors.New(fmt.Sprintf("actual env var length [%d] and expected env var length [%d] don't match",
-			len(actualEnvVars), len(expected)))
+			len(actual), len(expected)))
 	}
 
-	for k, v := range expected {
-		if actualEnvVars[k] != v {
-			return errors.New(fmt.Sprintf("actual env var value [%s] and expected env var value [%s] don't match for key [%s]",
-				v, actualEnvVars[k], k))
+	for i := range actual {
+		if actual[i] != expected[i] {
+			return fmt.Errorf("mismatch in expected env var %s and actual env var %s", actual[i], expected[i])
 		}
 	}
 
